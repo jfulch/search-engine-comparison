@@ -13,8 +13,10 @@ USER_AGENTS = [
 	"Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
 ]
 
-# Load existing results
 results_path = 'duck-data/DuckDuckGo_Result3.json'
+input_queries_path = 'query-sets/100QueriesSet3.txt'
+
+# Load existing results
 if os.path.exists(results_path):
     with open(results_path, 'r') as f:
         results = json.load(f)
@@ -22,18 +24,24 @@ else:
     results = {}
 
 # Read all queries
-with open('100QueriesSet3.txt', 'r') as f:
+with open(input_queries_path, 'r') as f:
     queries = [line.strip() for line in f if line.strip()]
 
 def scrape_duckduckgo(query, max_retries=3):
     url = f"https://duckduckgo.com/html/?q={requests.utils.quote(query)}"
+    session = requests.Session()
     for attempt in range(max_retries):
         try:
             headers = {
-                "User-Agent": random.choice(USER_AGENTS)
+                "User-Agent": random.choice(USER_AGENTS),
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Referer": "https://duckduckgo.com/",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1"
             }
-            resp = requests.get(url, headers=headers, timeout=10)
-            resp.raise_for_status() 
+            resp = session.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
             soup = BeautifulSoup(resp.text, 'html.parser')
             links = []
             for a in soup.select('a.result__a'):
@@ -42,11 +50,15 @@ def scrape_duckduckgo(query, max_retries=3):
                     links.append(href)
                 if len(links) == 10:
                     break
+            print(f"[DEBUG] Found {len(links)} links for query: {query}")
+            if not links:
+                print(f"[DEBUG] No results found for query: {query}")
+                print(resp.text[:2000])  # Print first 2000 chars of HTML
             return links
         except Exception as e:
             print(f"Error on attempt {attempt+1} for query '{query}': {e}")
-            time.sleep(5)  # Wait before retrying
-    return []  
+            time.sleep(5)
+    return []
 
 for idx, query in enumerate(queries):
     if results.get(query):  # Skip if already has results

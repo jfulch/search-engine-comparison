@@ -1,0 +1,100 @@
+import time
+import random
+import json
+import os
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from urllib.parse import unquote, urlparse, parse_qs
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/116.0",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
+]
+
+results_path = 'yahoo-data/Yahoo_Result3_sel.json'
+input_queries_path = 'query-sets/10QueriesSet3.txt'
+
+if os.path.exists(results_path):
+    with open(results_path, 'r') as f:
+        results = json.load(f)
+else:
+    results = {}
+
+with open(input_queries_path, 'r') as f:
+    queries = [line.strip() for line in f if line.strip()]
+
+def clean_yahoo_url(url):
+    if 'RU=' in url:
+        try:
+            start = url.find('RU=') + 3
+            end = url.find('/RK=', start)
+            if end == -1:
+                end = len(url)
+            real_url = url[start:end]
+            return unquote(real_url)
+        except Exception:
+            pass
+    return url
+
+def scrape_yahoo_selenium(query, driver):
+    url = f"https://search.yahoo.com/search?p={query}"
+    driver.get(url)
+    time.sleep(random.uniform(2, 4))  # Let page load
+    links = []
+    # Try main selector
+    for a in driver.find_elements(By.CSS_SELECTOR, 'div#web ol li div.compTitle a'):
+        href = a.get_attribute('href')
+        if href and href.startswith('http'):
+            links.append(href)
+        if len(links) == 10:
+            break
+    # Fallback broader selector
+    if len(links) < 10:
+        for a in driver.find_elements(By.CSS_SELECTOR, 'div#web a'):
+            href = a.get_attribute('href')
+            if href and href.startswith('http') and href not in links:
+                links.append(href)
+            if len(links) == 10:
+                break
+    print(f"[DEBUG] Found {len(links)} links for query: {query}")
+    return links
+
+chrome_options = Options()
+chrome_options.add_argument('--headless')
+chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument(f'user-agent={random.choice(USER_AGENTS)}')
+
+# You may need to set the path to your chromedriver here
+# driver = webdriver.Chrome(executable_path='/path/to/chromedriver', options=chrome_options)
+driver = webdriver.Chrome(options=chrome_options)
+
+cleaned_results = {}
+for idx, query in enumerate(queries):
+    if results.get(query):
+        continue
+    print(f"Scraping query {idx+1}/{len(queries)}: {query}")
+    raw_links = scrape_yahoo_selenium(query, driver)
+    if not raw_links:
+        print(f"[ERROR] No links found for query: {query}. Stopping process.")
+        # Print page source for debugging
+        print(driver.page_source[:2000])
+        driver.quit()
+        exit(1)
+    cleaned_results[query] = [clean_yahoo_url(u) for u in raw_links]
+    if idx < len(queries) - 1:
+        delay = random.randint(30, 120)
+        print(f"Waiting {delay} seconds...")
+        time.sleep(delay)
+
+for query in results:
+    cleaned_results[query] = [clean_yahoo_url(u) for u in results[query]]
+
+driver.quit()
+
+with open(results_path, 'w') as f:
+    json.dump(cleaned_results, f, indent=2)
