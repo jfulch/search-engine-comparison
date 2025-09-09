@@ -5,7 +5,9 @@ import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from urllib.parse import unquote, urlparse, parse_qs
+from urllib.parse import unquote
+import base64
+from urllib.parse import urlparse, parse_qs, unquote
 
 USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
@@ -15,10 +17,10 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
 ]
 
-results_path = 'yahoo-data/Yahoo_Result.json'
-input_queries_path = 'query-sets/10QueriesSet3.txt'
+results_path = 'bing-data/Bing_Result.json'
+input_queries_path = 'query-sets/50QueriesSet3.txt'
 
-if os.path.exists(results_path):
+if os.path.exists(results_path) and os.path.getsize(results_path) > 0:
     with open(results_path, 'r') as f:
         results = json.load(f)
 else:
@@ -27,44 +29,47 @@ else:
 with open(input_queries_path, 'r') as f:
     queries = [line.strip() for line in f if line.strip()]
 
-def clean_yahoo_url(url):
-    if 'RU=' in url:
+def clean_bing_url(url):
+    # If it's a Bing redirect, extract and decode the real URL from the 'u' parameter
+    parsed = urlparse(url)
+    qs = parse_qs(parsed.query)
+    if "bing.com/ck/a" in url and "u" in qs:
+        b64 = qs["u"][0]
+        # Remove leading 'a1' if present, then decode
+        if b64.startswith("a1"):
+            b64 = b64[2:]
         try:
-            start = url.find('RU=') + 3
-            end = url.find('/RK=', start)
-            if end == -1:
-                end = len(url)
-            real_url = url[start:end]
-            return unquote(real_url)
+            decoded = base64.b64decode(b64).decode("utf-8")
+            return unquote(decoded)
         except Exception:
-            pass
+            return url
     return url
 
 def is_external_link(url):
-    # Filter out Yahoo search/redirect links, keep only real external links
-    return "yahoo.com" not in url or "/search?" not in url
+    # Only keep links that are not Bing internal, not navigation, not ads
+    parsed = urlparse(url)
+    # Exclude Bing domains
+    if "bing.com" in parsed.netloc:
+        # Allow Bing redirect links (which will be cleaned), but not navigation
+        if "/ck/a" in parsed.path:
+            return True
+        return False
+    # Exclude other known ad or navigation links if needed
+    return True
 
-def scrape_yahoo_selenium(query, driver):
-    url = f"https://search.yahoo.com/search?p={query}"
+def scrape_bing(query, driver):
+    url = f"http://www.bing.com/search?q={query}"
     driver.get(url)
-    time.sleep(random.uniform(2, 4))  # Let page load
+    time.sleep(random.uniform(2, 4))
     links = []
-    # Try main selector
-    for a in driver.find_elements(By.CSS_SELECTOR, 'div#web ol li div.compTitle a'):
+    for a in driver.find_elements(By.CSS_SELECTOR, 'li.b_algo h2 a'):
         href = a.get_attribute('href')
         if href and href.startswith('http') and is_external_link(href):
-            links.append(href)
+            links.append(clean_bing_url(href))
         if len(links) == 10:
             break
-    # Fallback broader selector
-    if len(links) < 10:
-        for a in driver.find_elements(By.CSS_SELECTOR, 'div#web a'):
-            href = a.get_attribute('href')
-            if href and href.startswith('http') and is_external_link(href) and href not in links:
-                links.append(href)
-            if len(links) == 10:
-                break
-    print(f"[DEBUG] Found {len(links)} external links for query: {query}")
+    print(f"[DEBUG] Raw links: {[a.get_attribute('href') for a in driver.find_elements(By.CSS_SELECTOR, 'li.b_algo h2 a')]}")
+    print(f"[DEBUG] Filtered links: {links}")
     return links
 
 chrome_options = Options()
@@ -73,15 +78,18 @@ chrome_options.add_argument('--disable-gpu')
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument(f'user-agent={random.choice(USER_AGENTS)}')
 
+# You may need to set the path to your chromedriver here
+# driver = webdriver.Chrome(executable_path='/path/to/chromedriver', options=chrome_options)
 driver = webdriver.Chrome(options=chrome_options)
 
 cleaned_results = {}
 for idx, query in enumerate(queries):
+    # Only skip queries that already have non-empty results
     if results.get(query) and results[query]:
         continue
     print(f"Scraping query {idx+1}/{len(queries)}: {query}")
     try:
-        raw_links = scrape_yahoo_selenium(query, driver)
+        raw_links = scrape_bing(query, driver)
     except Exception as e:
         print(f"[ERROR] Exception occurred for query: {query}. Stopping process.")
         print(str(e))
@@ -92,7 +100,8 @@ for idx, query in enumerate(queries):
         print(driver.page_source[:2000])
         driver.quit()
         exit(1)
-    cleaned_results[query] = [clean_yahoo_url(u) for u in raw_links]
+    cleaned_results[query] = [clean_bing_url(u) for u in raw_links]
+    # Incrementally update the JSON file after each query
     with open(results_path, 'w') as f:
         json.dump({**results, **cleaned_results}, f, indent=2)
     if idx < len(queries) - 1:
@@ -100,9 +109,10 @@ for idx, query in enumerate(queries):
         print(f"Waiting {delay} seconds...")
         time.sleep(delay)
 
+# Only fill in missing queries from previous results
 for query in results:
     if query not in cleaned_results:
-        cleaned_results[query] = [clean_yahoo_url(u) for u in results[query]]
+        cleaned_results[query] = [clean_bing_url(u) for u in results[query]]
 
 driver.quit()
 
