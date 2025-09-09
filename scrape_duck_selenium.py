@@ -16,7 +16,7 @@ USER_AGENTS = [
 ]
 
 results_path = 'duck-data/DuckDuckGo_Result.json'
-input_queries_path = 'query-sets/10QueriesSet3.txt'
+input_queries_path = 'query-sets/100QueriesSet3.txt'
 
 if os.path.exists(results_path) and os.path.getsize(results_path) > 0:
     with open(results_path, 'r') as f:

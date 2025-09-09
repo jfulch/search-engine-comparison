@@ -5,9 +5,8 @@ import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse, parse_qs
 import base64
-from urllib.parse import urlparse, parse_qs, unquote
 
 USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
@@ -18,7 +17,7 @@ USER_AGENTS = [
 ]
 
 results_path = 'bing-data/Bing_Result.json'
-input_queries_path = 'query-sets/50QueriesSet3.txt'
+input_queries_path = 'query-sets/10QueriesSet3.txt'
 
 if os.path.exists(results_path) and os.path.getsize(results_path) > 0:
     with open(results_path, 'r') as f:
@@ -48,14 +47,17 @@ def clean_bing_url(url):
 def is_external_link(url):
     # Only keep links that are not Bing internal, not navigation, not ads
     parsed = urlparse(url)
-    # Exclude Bing domains
     if "bing.com" in parsed.netloc:
         # Allow Bing redirect links (which will be cleaned), but not navigation
         if "/ck/a" in parsed.path:
             return True
         return False
-    # Exclude other known ad or navigation links if needed
     return True
+
+def is_real_external(url):
+    # After cleaning, exclude any links that are still Bing URLs
+    parsed = urlparse(url)
+    return "bing.com" not in parsed.netloc
 
 def scrape_bing(query, driver):
     url = f"http://www.bing.com/search?q={query}"
@@ -65,12 +67,15 @@ def scrape_bing(query, driver):
     for a in driver.find_elements(By.CSS_SELECTOR, 'li.b_algo h2 a'):
         href = a.get_attribute('href')
         if href and href.startswith('http') and is_external_link(href):
-            links.append(clean_bing_url(href))
+            links.append(href)
         if len(links) == 10:
             break
-    print(f"[DEBUG] Raw links: {[a.get_attribute('href') for a in driver.find_elements(By.CSS_SELECTOR, 'li.b_algo h2 a')]}")
-    print(f"[DEBUG] Filtered links: {links}")
-    return links
+    print(f"[DEBUG] Raw links: {links}")
+    # Clean and filter only real external links
+    cleaned_links = [clean_bing_url(u) for u in links]
+    external_links = [u for u in cleaned_links if is_real_external(u)]
+    print(f"[DEBUG] Filtered links: {external_links}")
+    return external_links
 
 chrome_options = Options()
 chrome_options.add_argument('--headless')
@@ -84,24 +89,22 @@ driver = webdriver.Chrome(options=chrome_options)
 
 cleaned_results = {}
 for idx, query in enumerate(queries):
-    # Only skip queries that already have non-empty results
     if results.get(query) and results[query]:
         continue
     print(f"Scraping query {idx+1}/{len(queries)}: {query}")
     try:
-        raw_links = scrape_bing(query, driver)
+        external_links = scrape_bing(query, driver)
     except Exception as e:
         print(f"[ERROR] Exception occurred for query: {query}. Stopping process.")
         print(str(e))
         driver.quit()
         exit(1)
-    if not raw_links:
+    if not external_links:
         print(f"[ERROR] No links found for query: {query}. Stopping process.")
         print(driver.page_source[:2000])
         driver.quit()
         exit(1)
-    cleaned_results[query] = [clean_bing_url(u) for u in raw_links]
-    # Incrementally update the JSON file after each query
+    cleaned_results[query] = external_links
     with open(results_path, 'w') as f:
         json.dump({**results, **cleaned_results}, f, indent=2)
     if idx < len(queries) - 1:
@@ -112,7 +115,7 @@ for idx, query in enumerate(queries):
 # Only fill in missing queries from previous results
 for query in results:
     if query not in cleaned_results:
-        cleaned_results[query] = [clean_bing_url(u) for u in results[query]]
+        cleaned_results[query] = [u for u in results[query] if is_real_external(u)]
 
 driver.quit()
 

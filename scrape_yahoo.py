@@ -14,8 +14,8 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
 ]
 
-results_path = 'yahoo-data/Yahoo_Result3.json'
-input_queries_path = 'query-sets/25QueriesSet3.txt'
+results_path = 'yahoo-data/Yahoo_Result.json'
+input_queries_path = 'query-sets/50QueriesSet3.txt'
 
 if os.path.exists(results_path):
     with open(results_path, 'r') as f:
@@ -60,34 +60,22 @@ def scrape_yahoo(query, max_retries=3):
                         break
             print(f"[DEBUG] Found {len(links)} links for query: {query}")
             if not links:
-                print(f"[DEBUG] No results found for query: {query}")
-                print(resp.text[:2000])  
+                print(f"[ERROR] No links found for query: {query}. Stopping process.")
+                print(resp.text[:2000])
+                return None
             return links
         except Exception as e:
-            print(f"Error on attempt {attempt+1} for query '{query}': {e}")
-            time.sleep(5)
-    return []
-
-for idx, query in enumerate(queries):
-    if results.get(query):
-        continue
-    print(f"Scraping query {idx+1}/{len(queries)}: {query}")
-    results[query] = scrape_yahoo(query)
-    if idx < len(queries) - 1:
-        delay = random.randint(10, 60)
-        print(f"Waiting {delay} seconds...")
-        time.sleep(delay)
+            print(f"[ERROR] Exception occurred for query: {query}. Stopping process.")
+            print(str(e))
+            return None
+    return None
 
 def clean_yahoo_url(url):
-    
     if 'RU=' in url:
         try:
-            
             parsed = urlparse(url)
             qs = parse_qs(parsed.query)
-            
             if 'RU=' in url:
-               
                 start = url.find('RU=') + 3
                 end = url.find('/RK=', start)
                 if end == -1:
@@ -98,9 +86,21 @@ def clean_yahoo_url(url):
             pass
     return url   
 
-cleaned_results = {}
-for query, urls in results.items():
-    cleaned_results[query] = [clean_yahoo_url(u) for u in urls]
+for idx, query in enumerate(queries):
+    if results.get(query):
+        continue
+    print(f"Scraping query {idx+1}/{len(queries)}: {query}")
+    raw_links = scrape_yahoo(query)
+    if raw_links is None:
+        print("Stopping script due to error or no results.")
+        break
+    cleaned_links = [clean_yahoo_url(u) for u in raw_links]
+    results[query] = cleaned_links
+    with open(results_path, 'w') as f:
+        json.dump(results, f, indent=2)
+    if idx < len(queries) - 1:
+        delay = random.randint(10, 60)
+        print(f"Waiting {delay} seconds...")
+        time.sleep(delay)
 
-with open(results_path, 'w') as f:
-    json.dump(cleaned_results, f, indent=2)
+print("Done. Results saved to", results_path)

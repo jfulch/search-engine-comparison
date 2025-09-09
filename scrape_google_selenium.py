@@ -5,7 +5,7 @@ import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from urllib.parse import unquote, urlparse, parse_qs
+from urllib.parse import unquote
 
 USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
@@ -15,8 +15,8 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
 ]
 
-results_path = 'yahoo-data/Yahoo_Result.json'
-input_queries_path = 'query-sets/50QueriesSet3.txt'
+results_path = 'google-data/Google_Result.json'
+input_queries_path = 'query-sets/100QueriesSet3.txt'
 
 if os.path.exists(results_path):
     with open(results_path, 'r') as f:
@@ -27,48 +27,39 @@ else:
 with open(input_queries_path, 'r') as f:
     queries = [line.strip() for line in f if line.strip()]
 
-def clean_yahoo_url(url):
-    if 'RU=' in url:
+def clean_google_url(url):
+    # Remove Google's redirect and tracking parameters
+    if url.startswith("https://www.google.com/url?"):
         try:
-            start = url.find('RU=') + 3
-            end = url.find('/RK=', start)
-            if end == -1:
-                end = len(url)
-            real_url = url[start:end]
-            return unquote(real_url)
+            from urllib.parse import parse_qs, urlparse
+            qs = parse_qs(urlparse(url).query)
+            if "q" in qs:
+                return unquote(qs["q"][0])
         except Exception:
             pass
     return url
 
 def is_external_link(url):
-    # Filter out Yahoo search/redirect links, keep only real external links
-    return "yahoo.com" not in url or "/search?" not in url
+    # Only keep links that do NOT contain google.com in the domain
+    return "google.com" not in url
 
-def scrape_yahoo_selenium(query, driver):
-    url = f"https://search.yahoo.com/search?p={query}"
+def scrape_google(query, driver):
+    url = f"https://www.google.com/search?q={query}"
     driver.get(url)
     time.sleep(random.uniform(2, 4))  # Let page load
     links = []
-    # Try main selector
-    for a in driver.find_elements(By.CSS_SELECTOR, 'div#web ol li div.compTitle a'):
+    # Main selector for Google search results
+    for a in driver.find_elements(By.CSS_SELECTOR, 'div#search a'):
         href = a.get_attribute('href')
         if href and href.startswith('http') and is_external_link(href):
             links.append(href)
         if len(links) == 10:
             break
-    # Fallback broader selector
-    if len(links) < 10:
-        for a in driver.find_elements(By.CSS_SELECTOR, 'div#web a'):
-            href = a.get_attribute('href')
-            if href and href.startswith('http') and is_external_link(href) and href not in links:
-                links.append(href)
-            if len(links) == 10:
-                break
     print(f"[DEBUG] Found {len(links)} external links for query: {query}")
     return links
 
 chrome_options = Options()
-chrome_options.add_argument('--headless')
+#chrome_options.add_argument('--headless')
 chrome_options.add_argument('--disable-gpu')
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument(f'user-agent={random.choice(USER_AGENTS)}')
@@ -80,19 +71,14 @@ for idx, query in enumerate(queries):
     if results.get(query) and results[query]:
         continue
     print(f"Scraping query {idx+1}/{len(queries)}: {query}")
-    try:
-        raw_links = scrape_yahoo_selenium(query, driver)
-    except Exception as e:
-        print(f"[ERROR] Exception occurred for query: {query}. Stopping process.")
-        print(str(e))
-        driver.quit()
-        exit(1)
+    raw_links = scrape_google(query, driver)
     if not raw_links:
         print(f"[ERROR] No links found for query: {query}. Stopping process.")
         print(driver.page_source[:2000])
         driver.quit()
         exit(1)
-    cleaned_results[query] = [clean_yahoo_url(u) for u in raw_links]
+    cleaned_results[query] = [clean_google_url(u) for u in raw_links]
+    # Incrementally update the JSON file after each query
     with open(results_path, 'w') as f:
         json.dump({**results, **cleaned_results}, f, indent=2)
     if idx < len(queries) - 1:
@@ -102,7 +88,7 @@ for idx, query in enumerate(queries):
 
 for query in results:
     if query not in cleaned_results:
-        cleaned_results[query] = [clean_yahoo_url(u) for u in results[query]]
+        cleaned_results[query] = [clean_google_url(u) for u in results[query]]
 
 driver.quit()
 

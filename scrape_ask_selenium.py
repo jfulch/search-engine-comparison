@@ -16,7 +16,7 @@ USER_AGENTS = [
 ]
 
 results_path = 'ask-data/Ask_Result.json'
-input_queries_path = 'query-sets/75QueriesSet3.txt'
+input_queries_path = 'query-sets/100QueriesSet3.txt'
 
 if os.path.exists(results_path):
     with open(results_path, 'r') as f:
