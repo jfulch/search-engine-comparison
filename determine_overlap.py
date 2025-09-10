@@ -2,14 +2,14 @@ import json
 import csv
 
 # =============================================
-ASK_RESULTS_PATH = 'data/yahoo-data/Yahoo_Result_ordered.json'
+ASK_RESULTS_PATH = 'data/duck-data/DuckDuckGo_Result_ordered.json'
 GOOGLE_RESULTS_PATH = 'data/google-data/Google_Result_ordered.json'
-OUTPUT_CSV_PATH = 'results/yahoo_overlap_results.csv'
+OUTPUT_CSV_PATH = 'results/duck_overlap_results.csv'
 # =============================================
 
 def spearman_coefficient(google_urls, ask_urls):
     overlap = [url for url in ask_urls if url in google_urls]
-    n = len(google_urls)
+    n = len(overlap)
     if not overlap:
         return 0.0
     ranks_google = [google_urls.index(url) + 1 for url in overlap]
@@ -42,8 +42,8 @@ for idx, query in enumerate(queries):
     rows.append([
         query,
         num_overlap,
-        round(percent_overlap, 2),
-        round(spearman, 2)
+        round(percent_overlap, 4),
+        round(spearman, 4)
     ])
     total_overlap += num_overlap
     total_percent += percent_overlap
