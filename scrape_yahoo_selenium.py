@@ -16,7 +16,7 @@ USER_AGENTS = [
 ]
 
 results_path = 'yahoo-data/Yahoo_Result.json'
-input_queries_path = 'query-sets/50QueriesSet3.txt'
+input_queries_path = 'query-sets/100QueriesSet3.txt'
 
 if os.path.exists(results_path):
     with open(results_path, 'r') as f:

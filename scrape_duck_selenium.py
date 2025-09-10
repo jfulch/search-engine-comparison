@@ -32,7 +32,7 @@ def clean_duck_url(url):
 
 def is_external_link(url):
     # DuckDuckGo result links are usually external, but filter out duckduckgo.com links
-    return "duckduckgo.com" not in url
+    return ("duckduckgo.com" not in url)
 
 def scrape_duckduckgo(query, driver):
     url = f"https://duckduckgo.com/?q={query}&t=h_&ia=web"
