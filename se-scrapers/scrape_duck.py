@@ -13,8 +13,8 @@ USER_AGENTS = [
 	"Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
 ]
 
-results_path = 'duck-data/DuckDuckGo_Result3.json'
-input_queries_path = 'query-sets/100QueriesSet3.txt'
+results_path = '../data/duck-data/DuckDuckGo_Result3.json'
+input_queries_path = '../query-sets/100QueriesSet3.txt'
 
 # Load existing results
 if os.path.exists(results_path):

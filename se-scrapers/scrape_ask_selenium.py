@@ -15,8 +15,8 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
 ]
 
-results_path = 'ask-data/Ask_Result.json'
-input_queries_path = 'query-sets/100QueriesSet3.txt'
+results_path = '../data/ask-data/Ask_Result.json'
+input_queries_path = '../query-sets/100QueriesSet3.txt'
 
 if os.path.exists(results_path):
     with open(results_path, 'r') as f:

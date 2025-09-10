@@ -15,8 +15,8 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36"
 ]
 
-results_path = 'duck-data/DuckDuckGo_Result.json'
-input_queries_path = 'query-sets/100QueriesSet3.txt'
+results_path = '../data/duck-data/DuckDuckGo_Result.json'
+input_queries_path = '../query-sets/100QueriesSet3.txt'
 
 if os.path.exists(results_path) and os.path.getsize(results_path) > 0:
     with open(results_path, 'r') as f:

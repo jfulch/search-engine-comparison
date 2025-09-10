@@ -9,8 +9,8 @@ load_dotenv()
 API_KEY = os.getenv("google_api_key")
 CX = os.getenv("google_cse_id")
 
-results_path = 'google-data/Google_Result.json'
-input_queries_path = 'query-sets/100QueriesSet3.txt'
+results_path = '../data/google-data/Google_Result.json'
+input_queries_path = '../query-sets/100QueriesSet3.txt'
 
 if os.path.exists(results_path):
     with open(results_path, 'r') as f:

@@ -2,9 +2,9 @@ import json
 import csv
 
 # =============================================
-ASK_RESULTS_PATH = 'duck-data/DuckDuckGo_Result_ordered.json'
-GOOGLE_RESULTS_PATH = 'google-data/Google_Result_ordered.json'
-OUTPUT_CSV_PATH = 'duck_overlap_results.csv'
+ASK_RESULTS_PATH = 'data/yahoo-data/Yahoo_Result_ordered.json'
+GOOGLE_RESULTS_PATH = 'data/google-data/Google_Result_ordered.json'
+OUTPUT_CSV_PATH = 'results/yahoo_overlap_results.csv'
 # =============================================
 
 def spearman_coefficient(google_urls, ask_urls):
