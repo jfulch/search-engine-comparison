@@ -1,0 +1,26 @@
+SE Used: Yahoo!
+Avg num of Overlapping Results: 1.34
+Avg Pcercent Overlap: 13.4
+Avg Coefficient: -2.57
+
+Yahoo Analysis:
+Based on the comparison of Yahoo and Google search results for 100 queries, Yahoo's results showed 
+limited similarity to Google's. The average percent overlap between Yahoo and Google was 13.4%, 
+meaning that only about 1.3 out of every 10 results were shared between the two search engines for 
+a typical query. The average Spearman coefficient was -2.57, indicating that when Yahoo and Google 
+did share results, they often ranked them in different or even opposite orders. The negative Spearman 
+coefficient suggests that Yahoo frequently disagrees with Google on the relative importance of shared 
+results, with many queries showing strongly negative coefficients (as low as -36.0). Overall, Yahoo 
+performed worse than Google as a baseline, demonstrating both low overlap in results and significant 
+disagreement in ranking when results were shared.
+
+Bonus Analysis:
+Just for fun I also ran the scripts on DuckDuckGo and Ask.com as well. DuckDuckGo achieved an average 
+percent overlap of 11.1% with Google and an average Spearman coefficient of -4.14, indicating that when 
+results did overlap, they were often ranked in significantly different or opposite orders. Notably, 
+several queries showed strongly negative Spearman coefficients (as low as -67.0), suggesting DuckDuckGo 
+frequently inverts Google's ranking priorities. In stark contrast, Ask.com showed 0% overlap and 0.0 
+Spearman coefficient across all 100 queries, meaning not a single URL matched between Ask.com and Google. 
+This complete divergence makes Ask.com the most distinct search engine tested, suggesting it either uses 
+entirely different web crawling strategies, indexes different websites, or applies fundamentally different 
+relevance algorithms than Google.

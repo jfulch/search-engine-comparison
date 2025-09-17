@@ -2,25 +2,25 @@ import json
 import csv
 
 # =============================================
-ASK_RESULTS_PATH = 'data/duck-data/DuckDuckGo_Result_ordered.json'
-GOOGLE_RESULTS_PATH = 'data/google-data/Google_Result_ordered.json'
-OUTPUT_CSV_PATH = 'results/duck_overlap_results.csv'
+ASSIGNED_RESULTS_PATH = 'data/ask-data/Ask_Result_ordered.json'
+GOOGLE_RESULTS_PATH = 'data/google-data/Google_Result3_ordered.json'
+OUTPUT_CSV_PATH = 'results/ask_overlap_results3.csv'
 # =============================================
 
-def spearman_coefficient(google_urls, ask_urls):
-    overlap = [url for url in ask_urls if url in google_urls]
+def spearman_coefficient(google_urls, assigned_urls):
+    overlap = [url for url in assigned_urls if url in google_urls]
     n = len(overlap)
     if not overlap:
         return 0.0
     ranks_google = [google_urls.index(url) + 1 for url in overlap]
-    ranks_ask = [ask_urls.index(url) + 1 for url in overlap]
-    d_squared_sum = sum((rg - ra) ** 2 for rg, ra in zip(ranks_google, ranks_ask))
+    ranks_assigned = [assigned_urls.index(url) + 1 for url in overlap]
+    d_squared_sum = sum((rg - ra) ** 2 for rg, ra in zip(ranks_google, ranks_assigned))
     if n == 1:
         return 0.0
     rs = 1 - (6 * d_squared_sum) / (n * (n**2 - 1))
     return rs
 
-with open(ASK_RESULTS_PATH, 'r') as f:
+with open(ASSIGNED_RESULTS_PATH, 'r') as f:
     ask_results = json.load(f)
 with open(GOOGLE_RESULTS_PATH, 'r') as f:
     google_results = json.load(f)

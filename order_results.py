@@ -1,9 +1,9 @@
 import json
 
 # Paths to your files
-results_path = 'data/yahoo-data/Yahoo_Result.json'
+results_path = 'data/google-data/Google_Result3_original.json'
 queries_path = 'query-sets/100QueriesSet3.txt'
-output_path = 'data/yahoo-data/Yahoo_Result_ordered.json'
+output_path = 'data/google-data/Google_Result3_ordered.json'
 
 # Load queries in order
 with open(queries_path, 'r') as f:
